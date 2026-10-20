@@ -1,1 +1,0 @@
-# pitch_spin_lab
