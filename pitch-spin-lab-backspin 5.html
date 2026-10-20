@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pitch Spin Lab 3D</title>
+<style>
+:root{color-scheme:dark;--bg:#03152b;--panel:#061d38;--line:#155080;--blue:#168ff2;--muted:#91b8db}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#e8f3ff;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:clamp(22px,4vw,30px);margin:0;letter-spacing:.04em}.accent{color:var(--blue)}.muted{color:var(--muted);font-size:12px}
+.stage{height:clamp(300px,48vw,470px);position:relative;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:radial-gradient(ellipse at 50% 42%,#153a60,#03152b 75%);margin-bottom:12px}.stage canvas{width:100%;height:100%;display:block}
+.hud{position:absolute;left:10px;top:10px;background:#041a30dd;border:1px solid var(--line);padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}.panel h2{font-size:16px;margin:0 0 12px}.control{margin:12px 0}.labelrow{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-bottom:6px}.num{font-weight:700;color:white;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:var(--blue)}button{background:#082441;color:#e8f3ff;border:1px solid #17609a;border-radius:7px;padding:9px 10px;font-size:13px;cursor:pointer}button.on{background:#087ad0;border-color:#31aaff}.clocks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.buttons{display:flex;gap:8px;flex-wrap:wrap}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:#061d38;border:1px solid var(--line);border-radius:9px;padding:10px}.stat .value{font-size:20px;font-weight:750}.examples{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}.foot{margin-top:12px;line-height:1.55}
+@media(max-width:650px){main{padding:10px}.grid{grid-template-columns:1fr}.panel{padding:12px}.stage{height:330px}.stats .value{font-size:17px}.clocks{grid-template-columns:repeat(4,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<main>
+<header class="top"><div><h1>PITCH SPIN LAB <span class="accent">3D</span></h1><div class="muted">硬式球モデル・回転軸シミュレーター</div></div><div class="muted">ボールをドラッグして視点変更</div></header>
+<div class="stage" id="stage"><div id="canvasHost" style="width:100%;height:100%"></div><div class="hud" id="hud">3Dモデルを読み込み中…</div></div>
+<div class="stats">
+ <div class="stat"><div class="muted">回転効率</div><div class="value" id="statEff">100%</div></div>
+ <div class="stat"><div class="muted">ジャイロ角度</div><div class="value" id="statGyro">0°</div></div>
+ <div class="stat"><div class="muted">回転数</div><div class="value" id="statRpm">2200 rpm</div></div>
+</div>
+<div class="grid">
+<section class="panel">
+<h2>回転・投球設定</h2>
+<div class="control"><div class="labelrow"><label for="eff">回転効率</label><span class="num" id="effVal">100%</span></div><input id="eff" type="range" min="0" max="100" value="100"></div>
+<div class="control"><div class="labelrow"><label>ジャイロ角度</label><span class="num" id="gyroVal">0°</span></div><div class="muted">効率に応じて回転面と回転軸の角度を更新</div></div>
+<div class="control"><div class="labelrow"><label for="rpm">回転数</label><span class="num" id="rpmVal">2200 rpm</span></div><input id="rpm" type="range" min="0" max="3500" step="50" value="2200"></div>
+<div class="control"><div class="labelrow"><label for="speed">再生速度</label><span class="num" id="speedVal">1.0×</span></div><input id="speed" type="range" min="0" max="3" step=".1" value="1"></div>
+<div class="control"><div class="labelrow"><label for="velocity">球速</label><span class="num" id="velocityVal">145 km/h</span></div><input id="velocity" type="range" min="80" max="165" value="145"></div>
+<div class="buttons"><button id="play" class="on">⏸ 一時停止</button><button id="reset">回転リセット</button><button id="viewReset">視点リセット</button></div>
+</section>
+<section class="panel">
+<h2>回転方向（投手視点）</h2>
+<div class="clocks" id="clocks">
+<button data-h="12" class="on">12時</button><button data-h="1">1時</button><button data-h="2">2時</button><button data-h="3">3時</button>
+<button data-h="4">4時</button><button data-h="5">5時</button><button data-h="6">6時</button><button data-h="7">7時</button>
+<button data-h="8">8時</button><button data-h="9">9時</button><button data-h="10">10時</button><button data-h="11">11時</button>
+</div>
+<div class="muted" style="margin-top:12px">金色＝回転軸、青紫＝回転面（軸に直交）、青緑＝軸位置の目印。</div>
+<hr style="border:0;border-top:1px solid #155080;margin:14px 0">
+<h2>角度の参考値</h2>
+<div class="examples"><div><div class="muted">効率99%</div><strong>8°</strong></div><div><div class="muted">効率95%</div><strong>18°</strong></div><div><div class="muted">効率40%</div><strong>76°</strong></div></div>
+</section>
+</div>
+<p class="muted foot">注：硬式球の白い革・赤い縫い目を参考にした3D近似モデルです。実際の公式球の縫い目形状・軸測定を完全再現したものではありません。回転効率とジャイロ角度の参考値は、提示された写真の数値に合わせて補間しています。</p>
+<div id="error" class="muted"></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script>
+(() => {
+const $=id=>document.getElementById(id),host=$('canvasHost'),error=$('error');
+if(!window.THREE){error.textContent='3Dライブラリを読み込めませんでした。インターネット接続を確認してください。';return}
+const T=THREE,scene=new T.Scene();scene.background=new T.Color('#061a30');
+const camera=new T.PerspectiveCamera(38,1,.1,100);let az=.55,el=.38;
+function setCamera(){camera.position.set(5.8*Math.sin(az)*Math.cos(el),5.8*Math.sin(el),5.8*Math.cos(az)*Math.cos(el));camera.lookAt(0,0,0)}setCamera();
+const renderer=new T.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.outputColorSpace=T.SRGBColorSpace;host.appendChild(renderer.domElement);
+scene.add(new T.HemisphereLight(0xffffff,0x61748b,2));const light=new T.DirectionalLight(0xffffff,2.8);light.position.set(4,5,5);scene.add(light);const fill=new T.DirectionalLight(0xa4d2ff,1.2);fill.position.set(-4,1,-3);scene.add(fill);
+const ballRoot=new T.Group();scene.add(ballRoot);const spin=new T.Group();ballRoot.add(spin);
+spin.add(new T.Mesh(new T.SphereGeometry(1,100,80),new T.MeshStandardMaterial({color:0xfaf9f3,roughness:.92})));
+const grain=new T.MeshBasicMaterial({color:0xb7b2a8,transparent:true,opacity:.15});
+for(let i=0;i<450;i++){let y=Math.random()*2-1,a=Math.random()*Math.PI*2,r=Math.sqrt(1-y*y),m=new T.Mesh(new T.SphereGeometry(.0022,4,3),grain);m.position.set(r*Math.cos(a)*1.002,y*1.002,r*Math.sin(a)*1.002);spin.add(m)}
+function seamPt(t,extra=0){const lat=.70*Math.sin(2*t),lon=t,r=1.013+extra;return new T.Vector3(r*Math.cos(lat)*Math.cos(lon),r*Math.sin(lat),r*Math.cos(lat)*Math.sin(lon))}
+const seamPts=[];for(let i=0;i<=900;i++)seamPts.push(seamPt(i/900*Math.PI*2));const seamCurve=new T.CatmullRomCurve3(seamPts,false,'centripetal');
+spin.add(new T.Mesh(new T.TubeGeometry(seamCurve,900,.016,8,false),new T.MeshStandardMaterial({color:0xb91f2a,roughness:.76})));
+for(let i=0;i<108;i++){const t=(i+.5)/108*Math.PI*2,p=seamPt(t,.015),tan=seamCurve.getTangent(t/(Math.PI*2)).normalize(),side=new T.Vector3().crossVectors(p.clone().normalize(),tan).normalize(),g=new T.BufferGeometry().setFromPoints([p.clone().addScaledVector(side,-.025),p.clone().addScaledVector(side,.025)]);spin.add(new T.Line(g,new T.LineBasicMaterial({color:0x8f1722})))}
+// 4シーム回転の基準軸：ボールモデル内のY軸に固定。
+// 縫い目の形状・配置は変更せず、ボール全体の向きで指定した回転軸に合わせる。
+const entryLocal=new T.Vector3(0,1,0).normalize();
+const axisGroup=new T.Group();scene.add(axisGroup);const gold=new T.MeshStandardMaterial({color:0xd9a52d,emissive:0x503600,roughness:.4});
+const rod=new T.Mesh(new T.CylinderGeometry(.008,.008,3.05,12),gold);rod.rotation.z=Math.PI/2;axisGroup.add(rod);
+for(const x of [-1.525,1.525]){const c=new T.Mesh(new T.ConeGeometry(.03,.13,12),gold);c.position.x=x;c.rotation.z=x<0?Math.PI/2:-Math.PI/2;axisGroup.add(c)}
+const planeGroup=new T.Group();axisGroup.add(planeGroup);
+planeGroup.add(new T.Mesh(new T.CircleGeometry(1.42,100),new T.MeshBasicMaterial({color:0x7378ff,transparent:true,opacity:.36,side:T.DoubleSide,depthWrite:false})));
+planeGroup.add(new T.Mesh(new T.RingGeometry(1.385,1.405,100),new T.MeshBasicMaterial({color:0x9a9dff,transparent:true,opacity:.8,side:T.DoubleSide})));
+planeGroup.quaternion.setFromUnitVectors(new T.Vector3(0,0,1),new T.Vector3(1,0,0));
+const dot=new T.Mesh(new T.SphereGeometry(.045,18,14),new T.MeshStandardMaterial({color:0x15d3bd,emissive:0x087d72,emissiveIntensity:.5}));scene.add(dot);
+let clock=12,eff=100,rpm=2200,speed=1,vel=145,playing=true,phase=0,last=performance.now(),axis=new T.Vector3(1,0,0),orientation=new T.Quaternion();
+function gyroFor(e){const pts=[[0,90],[40,76],[95,18],[99,8],[100,0]];for(let i=0;i<pts.length-1;i++){const [x1,y1]=pts[i],[x2,y2]=pts[i+1];if(e>=x1&&e<=x2)return y1+(y2-y1)*(e-x1)/(x2-x1)}return 0}
+function update(){eff=+$('eff').value;rpm=+$('rpm').value;speed=+$('speed').value;vel=+$('velocity').value;const gyro=gyroFor(eff)*Math.PI/180,theta=(clock%12)*Math.PI/6,radial=new T.Vector3(Math.sin(theta),Math.cos(theta),0),transverse=new T.Vector3(-radial.y,radial.x,0).normalize();
+axis.copy(transverse).multiplyScalar(Math.cos(gyro)).add(new T.Vector3(0,0,1).multiplyScalar(Math.sin(gyro))).normalize();
+orientation.setFromUnitVectors(entryLocal,axis);ballRoot.quaternion.copy(orientation);axisGroup.quaternion.setFromUnitVectors(new T.Vector3(1,0,0),axis);dot.position.copy(axis).multiplyScalar(1.018);
+const deg=Math.round(gyro*180/Math.PI);$('effVal').textContent=eff+'%';$('gyroVal').textContent=deg+'°';$('rpmVal').textContent=rpm+' rpm';$('speedVal').textContent=speed.toFixed(1)+'×';$('velocityVal').textContent=vel+' km/h';$('statEff').textContent=eff+'%';$('statGyro').textContent=deg+'°';$('statRpm').textContent=rpm+' rpm';$('hud').innerHTML='回転効率 '+eff+'% ／ ジャイロ角度 '+deg+'°<br>青紫の円盤：回転軸に対して常に90°';document.querySelectorAll('#clocks [data-h]').forEach(b=>b.classList.toggle('on',+b.dataset.h===clock))}
+['eff','rpm','speed','velocity'].forEach(id=>$(id).addEventListener('input',update));
+document.querySelectorAll('#clocks [data-h]').forEach(b=>b.addEventListener('click',()=>{clock=+b.dataset.h;update()}));
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'⏸ 一時停止':'▶ 再生';$('play').classList.toggle('on',playing)});
+$('reset').addEventListener('click',()=>{phase=0;spin.rotation.set(0,0,0)});
+$('viewReset').addEventListener('click',()=>{az=.55;el=.38;setCamera()});
+let dragging=false,px=0,py=0;renderer.domElement.addEventListener('pointerdown',e=>{dragging=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointerup',()=>dragging=false);renderer.domElement.addEventListener('pointercancel',()=>dragging=false);
+renderer.domElement.addEventListener('pointermove',e=>{if(!dragging)return;az-=(e.clientX-px)*.008;el=Math.max(-1.2,Math.min(1.2,el+(e.clientY-py)*.008));px=e.clientX;py=e.clientY;setCamera()});
+function resize(){const w=Math.max(1,host.clientWidth),h=Math.max(1,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+if(window.ResizeObserver)new ResizeObserver(resize).observe(host);else window.addEventListener('resize',resize);update();resize();
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(.05,(now-last)/1000);last=now;if(playing&&speed>0&&rpm>0){phase+=dt*rpm/60*2*Math.PI*speed;spin.rotation.set(0,0,0);spin.rotateOnAxis(axis.clone().applyQuaternion(orientation.clone().invert()),-(phase%(Math.PI*2)))}renderer.render(scene,camera)}
+requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
